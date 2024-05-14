@@ -65,29 +65,26 @@ void requestDisk(int track) {
 void releaseDisk(){
   /* Realease the disk according with the C-SCAN strategy */
   pthread_mutex_lock(&mutex);
+
   if(emptyPriQueue(greaterThanQueue) && emptyPriQueue(lowerThanQueue)){
     busy = 0;
     pthread_mutex_unlock(&mutex);
     return;
   }
   else{
-    if(!emptyPriQueue(greaterThanQueue)){
-      Request *req = priGet(greaterThanQueue);
-      req->ready = 1;
-      pthread_cond_signal(&req->condition);
-    }
-    else{
+    if(emptyPriQueue(greaterThanQueue)){
       //we swap the elements from lowerThanQueue to greaterThanQueue
       while(!emptyPriQueue(lowerThanQueue)){
         Request *req = priGet(lowerThanQueue);
         priPut(greaterThanQueue, req, req->track);
       }
-      if(!emptyPriQueue(greaterThanQueue)){
-        Request *req = priGet(greaterThanQueue);
-        req->ready = 1;
-        pthread_cond_signal(&req->condition);
-      }
+    }
+    if(!emptyPriQueue(greaterThanQueue)){
+      Request *req = priGet(greaterThanQueue);
+      req->ready = 1;
+      pthread_cond_signal(&req->condition);
     }
   }
+
   pthread_mutex_unlock(&mutex);
 }
