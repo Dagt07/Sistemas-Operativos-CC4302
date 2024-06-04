@@ -26,10 +26,21 @@ void nDestroyRWLock(nRWLock *rwl) {
 }
 
 
+void trash_function(nThread th){
+  nth_delQueue(th->ptr, th); //revisar puntero
+  th->ptr = NULL;
+  /*
+  nRWLock *rwl = *(nRWLock **)th->ptr;
+  nth_delQueue(rwl->writers_queue, th);
+  */
+}
+
+
 int nEnterWrite(nRWLock *rwl, int timeout) {
   START_CRITICAL
 
   nThread this_th = nSelf();
+  this_th->ptr = rwl;
 
   if(rwl->readers_count == 0 && !rwl->writing) {
     rwl->writing = 1;
@@ -39,7 +50,7 @@ int nEnterWrite(nRWLock *rwl, int timeout) {
       nth_putBack(rwl->writers_queue, this_th); //REFAC esta linea arriba si funca
       this_th->ptr = &rwl->writers_queue; //enunciado
       suspend(WAIT_RWLOCK_TIMEOUT);
-      nth_programTimer(timeout * 1000000LL, trash_function(*this_th)); //revisar llamado a funcion
+      nth_programTimer(timeout * 1000000LL, trash_function); //revisar llamado a funcion
     }
     else { // Caso espera indefinida (timeout <= 0)
       nth_putBack(rwl->writers_queue, this_th);
@@ -133,13 +144,4 @@ void nExitRead(nRWLock *rwl) {
   }
 
   END_CRITICAL
-}
-
-void trash_function(nThread th){
-  nth_delQueue(*th->ptr, th); //revisar puntero
-  th->ptr = NULL;
-  /*
-  nRWLock *rwl = *(nRWLock **)th->ptr;
-  nth_delQueue(rwl->writers_queue, th);
-  */
 }
