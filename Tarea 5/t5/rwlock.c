@@ -36,19 +36,19 @@ int nEnterWrite(nRWLock *rwl, int timeout) {
   START_CRITICAL
 
   nThread this_th = nSelf();
-  this_th->ptr = rwl->writers_queue;
+  this_th->ptr = rwl;
 
   if(rwl->readers_count == 0 && !rwl->writing) {
     rwl->writing = 1;
   }
   else{
-    nth_putBack(rwl->writers_queue, this_th); //REFAC esta linea respecto a versión anterior
-    if(timeout>0){ // Caso espera con timeout
-      this_th->ptr = rwl->writers_queue; //enunciado
+    nth_putBack(rwl->writers_queue, this_th);
+    if(timeout>0){ // Case with timeout
+      this_th->ptr = rwl->writers_queue;
       suspend(WAIT_RWLOCK_TIMEOUT);
       nth_programTimer(timeout * 1000000LL, trash_function);
     }
-    else{ // Caso espera indefinida (timeout <= 0)
+    else{ // Case without timeout (timeout <= 0)
       suspend(WAIT_RWLOCK);
     }
     // Call the scheduler
@@ -92,7 +92,6 @@ void nExitWrite(nRWLock *rwl) {
     while(!nth_emptyQueue(rwl->readers_queue)){
       nThread reader_th = nth_getFront(rwl->readers_queue);
       if(reader_th->status == WAIT_RWLOCK_TIMEOUT){
-        // cancelar timer si tiene timer
         nth_cancelThread(reader_th);
       }
       setReady(reader_th);
@@ -105,7 +104,6 @@ void nExitWrite(nRWLock *rwl) {
     if(!nth_emptyQueue(rwl->writers_queue)){
       nThread writer_th = nth_getFront(rwl->writers_queue);
       if(writer_th->status == WAIT_RWLOCK_TIMEOUT){
-        // cancelar timer si tiene timer
         nth_cancelThread(writer_th);
       }
       setReady(writer_th);
@@ -125,7 +123,6 @@ void nExitRead(nRWLock *rwl) {
   if(rwl->readers_count == 0 && !nth_emptyQueue(rwl->writers_queue)){
     nThread writer_th = nth_getFront(rwl->writers_queue);
     if(writer_th->status == WAIT_RWLOCK_TIMEOUT){
-        // cancelar timer si tiene timer
         nth_cancelThread(writer_th);
     }
     rwl->writing = 1;
