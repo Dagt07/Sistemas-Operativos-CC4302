@@ -27,7 +27,7 @@ void nDestroyRWLock(nRWLock *rwl) {
 
 
 void trash_function(nThread th){
-  nth_delQueue(th->ptr, th); //revisar puntero
+  nth_delQueue(th->ptr, th); 
   th->ptr = NULL;
 }
 
@@ -36,21 +36,19 @@ int nEnterWrite(nRWLock *rwl, int timeout) {
   START_CRITICAL
 
   nThread this_th = nSelf();
-  this_th->ptr = &rwl->writers_queue;
+  this_th->ptr = rwl->writers_queue;
 
   if(rwl->readers_count == 0 && !rwl->writing) {
     rwl->writing = 1;
   }
   else{
+    nth_putBack(rwl->writers_queue, this_th); //REFAC esta linea respecto a versión anterior
     if(timeout>0){ // Caso espera con timeout
-      this_th = nSelf();
-      nth_putBack(rwl->writers_queue, this_th); //REFAC esta linea arriba si funca
-      this_th->ptr = &rwl->writers_queue; //enunciado
+      this_th->ptr = rwl->writers_queue; //enunciado
       suspend(WAIT_RWLOCK_TIMEOUT);
       nth_programTimer(timeout * 1000000LL, trash_function);
     }
     else{ // Caso espera indefinida (timeout <= 0)
-      nth_putBack(rwl->writers_queue, this_th);
       suspend(WAIT_RWLOCK);
     }
     // Call the scheduler
@@ -88,16 +86,6 @@ int nEnterRead(nRWLock *rwl, int timeout) {
 void nExitWrite(nRWLock *rwl) {
   START_CRITICAL
 
-  /* tengo dudas con esta parte 
-  if(this_th->status == WAIT_RWLOCK || this_th->status == WAIT_RWLOCK_TIMEOUT){
-    if(this_th->status == WAIT_RWLOCK_TIMEOUT){
-        // cancelar timer si tiene timer
-        nth_cancelThread(this_th);
-    }
-    setReady(this_th); //tengo dudas con esta parte
-  }
-  fin dudas */
-
   rwl->writing = 0;
 
   if(!nth_emptyQueue(rwl->readers_queue)){
@@ -132,16 +120,6 @@ void nExitWrite(nRWLock *rwl) {
 
 void nExitRead(nRWLock *rwl) {
   START_CRITICAL
-
-  /* tengo dudas con esta parte
-  if(this_th->status == WAIT_RWLOCK || this_th->status == WAIT_RWLOCK_TIMEOUT){
-    if(this_th->status == WAIT_RWLOCK_TIMEOUT){
-        // cancelar timer si tiene timer
-        nth_cancelThread(this_th);
-    }
-    setReady(this_th); 
-  }
-  fin dudas */
 
   rwl->readers_count--;
   if(rwl->readers_count == 0 && !nth_emptyQueue(rwl->writers_queue)){
