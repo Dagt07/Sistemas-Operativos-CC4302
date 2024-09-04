@@ -14,3 +14,5 @@ The official platform for testing assignments is Debian 12, which should be run 
 - [Tarea 2](/Tarea%202/): Mutex and Conditions / Mutex y Condiciones
 - [Tarea 3](/Tarea%203/): Request Pattern / Patrón Request
 - [Tarea 4](/Tarea%204/): Nthreads
+- [Tarea 5](/Tarea%205/): Nthreads with Timeouts 
+- [Tarea 6](/Tarea%205/): Spinlocks
